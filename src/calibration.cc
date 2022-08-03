@@ -9,13 +9,16 @@
 #include "apriltag/common/pjpeg.h"
 #include "apriltag/common/zarray.h"
 
+//TODO
+#define VIDEO "/dev/video2"
+
 using namespace std;
 using namespace cv;
 
 void creat_xml(Mat matrix)
 {
         FileStorage fs("matrix/matrix.xml", FileStorage::WRITE);
-        fs << "matrix.xml" << matrix;
+        fs << "matrix" << matrix;
         fs.release();
 }
 
@@ -45,17 +48,35 @@ void draw(Mat frame, apriltag_detection_t *det)
 	det->c[1]+textsize.height/2),
 	fontface, fontscale, Scalar(0xff, 0x99, 0), 2);
 }
-Mat cameraMatrix_front = (Mat_<double>(3,3) << 1.298868409966510e+03, 0, 6.377400159724644e+02,
-					 0, 1.299075503646548e+03, 3.875515416693556e+02,
-					 0, 0, 1);
-Mat distCoeffs_front = (Mat_<double>(1,5) << 0.001087898463482, 0.006889907983617, /*0.157299920720531, 0.192507866331635*/0,0, 0);
+
+//TODO
+Mat cameraMatrix = (Mat_<double>(3,3) << 865.920425978195, 0, 654.873058068272,
+0, 865.658142181186, 350.919789060440,
+0, 0, 1;
+/*1147.14807662718, 0, 631.287953202974,
+0, 1146.30770069275, 412.277737454872,
+0, 0, 1); *///left
+
+		/*1145.91055981631, 0, 691.158173381245,
+0, 1145.67928958460, 412.102171045947,
+0, 0, 1);*///right
+
+		/*1.298868409966510e+03, 0, 6.377400159724644e+02,
+		0, 1.299075503646548e+03, 3.875515416693556e+02,
+		 0, 0, 1);
+*/
+Mat distCoeffs = (Mat_<double>(1,5) << 0.00104731823467106, 0.00232463818599928, 0, 0, 0);
+		//0.00100803187859399, 0.00426627267853791, 0, 0, 0);//left
+		//0.00137372073339136, 0.00469950907335194, 0, 0, 0);//right
+	       //	0.001087898463482, 0.006889907983617, 0.157299920720531, 0.192507866331635, 0);
+//
 
 Mat rotate_world_vehicle = (Mat_<double>(3,3) << 1, 0, 0,
 						 0, 1, 0,
 						 0, 0, 1);
-
-Mat world_vehicle_matrix = (Mat_<double>(4, 4) << 1, 0, 0, - 2700,
-						  0, 1, 0, - 3300,
+//TODO
+Mat world_vehicle_matrix = (Mat_<double>(4, 4) << 1, 0, 0, - 6900,
+						  0, 1, 0, - 3900,
 						  0, 0, 1, - 0,
 						  0, 0, 0, 1);
 
@@ -73,8 +94,8 @@ void localization(apriltag_detection_t *det)
 	if (id > 100)
 	{
 		id = id - 100;
-		int center_x = (id % 13 - 1) * 600 + 300;
-		int center_y = (id / 13) * 600 + 300;
+		int center_x = ((id - 1) % 13) * 600 + 300;
+		int center_y = ((id - 1) / 13) * 600 + 300;
 		objectPoints.push_back(Point3d(center_x - 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y + 100, 0));
@@ -84,9 +105,9 @@ void localization(apriltag_detection_t *det)
 		Mat tvec;
 		cout << "obj:" << objectPoints << endl;
 		cout << "img" << imagePoints << endl;
-		cout << "cameraMatrix_front" << cameraMatrix_front << endl;
-		cout << "distCoeffs" << distCoeffs_front << endl;
-		solvePnP(objectPoints, imagePoints, cameraMatrix_front, distCoeffs_front, rvec, tvec);
+		cout << "cameraMatrix" << cameraMatrix << endl;
+		cout << "distCoeffs" << distCoeffs << endl;
+		solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
 		Rodrigues(rvec, rmat);
 		cout << "rmat" << rmat << endl;
 		cout << "tvec" << tvec << endl;
@@ -103,16 +124,16 @@ void localization(apriltag_detection_t *det)
 		cout << "cam_coordinate" << cam_coordinate << endl;
 		Mat cam_vehicle_matrix = world_vehicle_matrix * world_cam_matrix_invert;
 		cout << "cam_vehicle_matrix" << cam_vehicle_matrix << endl;
-		creat_xml(cam_vehicle_matrix);
+		//creat_xml(cam_vehicle_matrix);
 	}
 }
 
 int main(int argc, char **argv)
 {
 	VideoCapture cap_front;
-	cap_front.open("/dev/video2");
+	cap_front.open(VIDEO);
 	cap_front.set(CAP_PROP_FRAME_WIDTH, 1280);
-	cap_front.set(CAP_PROP_FRAME_HEIGHT, 800);
+	cap_front.set(CAP_PROP_FRAME_HEIGHT, 800);//TODO
 	if (!cap_front.isOpened())return -1;
 
 	apriltag_detector_t *td = apriltag_detector_create();
@@ -137,11 +158,11 @@ int main(int argc, char **argv)
 		for (int i = 0; i < zarray_size(detections); i++)
 		{
            	 	zarray_get(detections, i, &det);
-			draw(frame, det);
+			//draw(frame, det);
 			//cout << "id:" << det->id << endl;
 			localization(det);
 		}
-		imshow("Tag Det", frame);
+		//imshow("Tag Det", frame);
 		waitKey(1000/30);
 	}
 	return 0;
