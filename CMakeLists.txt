@@ -149,6 +149,7 @@ include_directories(${apriltag_INCLUDE_DIRS}/apriltag)
 # add_executable(${PROJECT_NAME}_node src/localization_moudle_node.cpp)
 add_executable(localization src/localization.cc)
 add_executable(calibration src/calibration.cc)
+add_executable(camera_test src/camera_test.cc)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -172,6 +173,11 @@ target_link_libraries(calibration
 target_link_libraries(calibration ${OpenCV_LIBS})
 target_link_libraries(calibration apriltag)
 
+target_link_libraries(camera_test
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(camera_test ${OpenCV_LIBS})
+target_link_libraries(camera_test apriltag)
 #############
 ## Install ##
 #############
