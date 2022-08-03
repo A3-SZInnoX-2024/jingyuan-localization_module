@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>localization_moudle</name>
+  <name>localization_module</name>
   <version>0.0.0</version>
-  <description>The localization_moudle package</description>
+  <description>The localization_module package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

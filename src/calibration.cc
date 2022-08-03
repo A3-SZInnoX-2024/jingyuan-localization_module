@@ -15,7 +15,7 @@ using namespace cv;
 void creat_xml(Mat matrix)
 {
         FileStorage fs("matrix/matrix.xml", FileStorage::WRITE);
-        fs << "matrix.xml" << img;
+        fs << "matrix.xml" << matrix;
         fs.release();
 }
 
@@ -104,7 +104,6 @@ void localization(apriltag_detection_t *det)
 		Mat cam_vehicle_matrix = world_vehicle_matrix * world_cam_matrix_invert;
 		cout << "cam_vehicle_matrix" << cam_vehicle_matrix << endl;
 		creat_xml(cam_vehicle_matrix);
-
 	}
 }
 
