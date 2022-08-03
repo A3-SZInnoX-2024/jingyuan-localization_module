@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 		winner_num = 0;
 		fraction = 0;
 
-		imshow("Tag Det", frame);
+		//imshow("Tag Det", frame);
 		waitKey(1000/30);
 		loop_rate.sleep();
 	}
