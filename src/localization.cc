@@ -85,7 +85,7 @@ struct localization_type{
 	double phi;
 }localization_msg;
 
-void localization(apriltag_detection_t *det)
+void localization(apriltag_detection_t *det, bool left_right)
 {
 	vector<Point3d> objectPoints;
 	vector<Point2d> imagePoints;
@@ -95,6 +95,17 @@ void localization(apriltag_detection_t *det)
 	imagePoints.push_back(Point2d(det->p[3][0], det->p[3][1]));
 
 	int id = det->id;
+	Mat cameraMatrix, distCoeffs;
+	if (left_right)
+	{
+		cameraMatrix = cameraMatrix_left;
+		distCoeffs = distCoeffs_left;
+	}
+	else
+	{
+		cameraMatrix = cameraMatrix_right;
+		distCoeffs = distCoeffs_right;
+	}
 
 	if (id > 100)
 	{
@@ -108,26 +119,26 @@ void localization(apriltag_detection_t *det)
 		Mat rvec;
 		Mat rmat;
 		Mat tvec;
-		cout << "obj:" << objectPoints << endl;
-		cout << "img" << imagePoints << endl;
-		cout << "cameraMatrix_front" << cameraMatrix_front << endl;
-		cout << "distCoeffs" << distCoeffs_front << endl;
-		solvePnP(objectPoints, imagePoints, cameraMatrix_front, distCoeffs_front, rvec, tvec);
+		//cout << "obj:" << objectPoints << endl;
+		//cout << "img" << imagePoints << endl;
+		//cout << "cameraMatrix" << cameraMatrix << endl;
+		//cout << "distCoeffs" << distCoeffs << endl;
+		solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
 		Rodrigues(rvec, rmat);
-		cout << "rmat" <<rmat << endl;
-		cout << "tvec" << tvec << endl;
+		//cout << "rmat" <<rmat << endl;
+		//cout << "tvec" << tvec << endl;
 		Mat supplement = (Mat_<double>(1, 4) << 0, 0, 0, 1);
 		Mat zero_coordinate = (Mat_<double>(4, 1) << 0, 0, 0, 1);
 		Mat world_cam_matrix;
 		hconcat(rmat, tvec, world_cam_matrix);
 		vconcat(world_cam_matrix, supplement, world_cam_matrix);
-		cout << "world_cam_matrix" << world_cam_matrix << endl;
+		//cout << "world_cam_matrix" << world_cam_matrix << endl;
 		Mat world_vehicle_matrix = cam_vehicle_matrix * world_cam_matrix;
-		cout << "world_vehicle_matrix" << world_vehicle_matrix << endl;
+		//cout << "world_vehicle_matrix" << world_vehicle_matrix << endl;
 		Mat world_vehicle_matrix_invert;
 		invert(world_vehicle_matrix, world_vehicle_matrix_invert);
 		Mat vehicle_coordinate = world_vehicle_matrix_invert * zero_coordinate;
-		cout << "vehicle_coordinate" << vehicle_coordinate << endl;
+		//cout << "vehicle_coordinate" << vehicle_coordinate << endl;
 		localization_msg.x = vehicle_coordinate.at<double>(0, 0);
 		localization_msg.y = vehicle_coordinate.at<double>(0, 1);
 		cout << "x:" << localization_msg.x << "y:" << localization_msg.y << endl;
@@ -157,39 +168,58 @@ int main(int argc, char **argv)
 	ros::Publisher localization_publisher = node.advertise<localization_moudle::Position>("position",1);
 	ros::Rate loop_rate(1000/30);
 
-	VideoCapture cap_front;
-	cap_front.open("/dev/video2");
-	cap_front.set(CAP_PROP_FRAME_WIDTH, 1280);
-	cap_front.set(CAP_PROP_FRAME_HEIGHT, 800);
-	if (!cap_front.isOpened())return -1;
+	VideoCapture cap_left;
+	cap_left.open("/dev/video2");
+	cap_left.set(CAP_PROP_FRAME_WIDTH, 1280);
+	cap_left.set(CAP_PROP_FRAME_HEIGHT, 800);
+	if (!cap_left.isOpened())return -1;
+
+	VideoCapture cap_right;
+	cap_left.open("/dev/video0");
+	cap_left.set(CAP_PROP_FRAME_WIDTH, 1280);
+	cap_left.set(CAP_PROP_FRAME_HEIGHT, 800);
+	if (!cap_left.isOpened())return -1;
 
 	apriltag_detector_t *td = apriltag_detector_create();
 	apriltag_family_t *tf = tag36h11_create();
 	apriltag_detector_add_family(td, tf);
 
-	Mat frame, gray;
+	Mat frame_left, gray_left, frame_right, gray_right;
 
 	ROS_INFO("init finished");
+
+	int fraction = 0;
+	int max_fraction = 0;
+	int winner_num = 0;
+	bool flag = 0;
+	bool left_right = 0;
 
 	while (ros::ok())
 	{
 		ros::spinOnce();
 
-		cap_front.read(frame);
-		cvtColor(frame, gray, COLOR_BGR2GRAY);
+		cap_left.read(frame_left);
+		cap_right.read(frame_right);
+		cvtColor(frame_left, gray_left, COLOR_BGR2GRAY);
+		cvtColor(frame_right, gray_right, COLOR_BGR2GRAY);
 
-		image_u8_t img_tag = {
-			.width = gray.cols,
-			.height = gray.rows,
-			.stride = gray.cols,
-			.buf = gray.data
+		image_u8_t img_tag_left = {
+			.width = gray_left.cols,
+			.height = gray_left.rows,
+			.stride = gray_left.cols,
+			.buf = gray_left.data
 		};
-		zarray_t *detections = apriltag_detector_detect(td, &img_tag);
+
+		image_u8_t img_tag_right = {
+			.width = gray_right.cols,
+			.height = gray_right.rows,
+			.stride = gray_right.cols,
+			.buf = gray_right.data
+		};
+
+		zarray_t *detections = apriltag_detector_detect(td, &img_tag_left);
 		apriltag_detection_t *det;
-		int fraction = 0;
-		int max_fraction = 0;
-		int winner_num = 0;
-		bool flag = 0;
+		
 		for (int i = 0; i < zarray_size(detections); i++)
 		{
            	zarray_get(detections, i, &det);
@@ -198,24 +228,49 @@ int main(int argc, char **argv)
 			if (fraction > max_fraction && det->id > 100)
 			{
 				flag = 1;
+				left_right = 1;
 				winner_num = i;
 				max_fraction = fraction;
 			}
 			//localization(det);
 		}
 		cout << zarray_size(detections) << endl;
+		
+		if (flag == 0)
+		{
+			zarray_t *detections = apriltag_detector_detect(td, &img_tag_right);
+			apriltag_detection_t *det;
+			detections = apriltag_detector_detect(td, &img_tag_right);
+			
+			for (int i = 0; i < zarray_size(detections); i++)
+			{
+				zarray_get(detections, i, &det);
+				fraction = pow(det->p[0][0] - det->p[2][0], 2) + pow(det->p[0][1] - det->p[0][1], 2) + pow(det->p[1][0] - det->p[3][0], 2) + pow(det->p[1][1] - det->p[3][1], 2);
+				//cout << "id:" << det->id  << "fraction" << fraction << endl;
+				if (fraction > max_fraction && det->id > 100)
+				{
+					flag = 1;
+					left_right = 0;
+					winner_num = i;
+					max_fraction = fraction;
+				}
+				//localization(det);
+			}
+		}
+
 		if (flag && zarray_size(detections) > 0)
 		{
 			cout << "winner_num:" << winner_num << endl;
 			zarray_get(detections, winner_num, &det);
-			draw(frame, det);
-			localization(det);
+			draw(frame_left, det);
+			localization(det, left_right);
 			position_msg.x = localization_msg.x;
 			position_msg.y = localization_msg.y;
 			position_msg.phi = localization_msg.phi;
 			localization_publisher.publish(position_msg);
 			ROS_INFO("located");
 		}
+
 		flag = 0;
 		max_fraction = 0;
 		winner_num = 0;
