@@ -50,24 +50,25 @@ void draw(Mat frame, apriltag_detection_t *det)
 }
 
 //TODO
-Mat cameraMatrix = (Mat_<double>(3,3) << 865.920425978195, 0, 654.873058068272,
+Mat cameraMatrix = (Mat_<double>(3,3) << /*865.920425978195, 0, 654.873058068272,
 0, 865.658142181186, 350.919789060440,
-0, 0, 1);
-/*1147.14807662718, 0, 631.287953202974,
+0, 0, 1);*/
+/*
+1147.14807662718, 0, 631.287953202974,
 0, 1146.30770069275, 412.277737454872,
 0, 0, 1); *///left
 
-		/*1145.91055981631, 0, 691.158173381245,
+		1145.91055981631, 0, 691.158173381245,
 0, 1145.67928958460, 412.102171045947,
-0, 0, 1);*///right
+0, 0, 1);//right
 
 		/*1.298868409966510e+03, 0, 6.377400159724644e+02,
 		0, 1.299075503646548e+03, 3.875515416693556e+02,
 		 0, 0, 1);
 */
-Mat distCoeffs = (Mat_<double>(1,5) << 0.00104731823467106, 0.00232463818599928, 0, 0, 0);
+Mat distCoeffs = (Mat_<double>(1,5) << //0.00104731823467106, 0.00232463818599928, 0, 0, 0);
 		//0.00100803187859399, 0.00426627267853791, 0, 0, 0);//left
-		//0.00137372073339136, 0.00469950907335194, 0, 0, 0);//right
+		0.00137372073339136, 0.00469950907335194, 0, 0, 0);//right
 	       //	0.001087898463482, 0.006889907983617, 0.157299920720531, 0.192507866331635, 0);
 //
 
@@ -75,8 +76,8 @@ Mat rotate_world_vehicle = (Mat_<double>(3,3) << 1, 0, 0,
 						 0, 1, 0,
 						 0, 0, 1);
 //TODO
-Mat world_vehicle_matrix = (Mat_<double>(4, 4) << 1, 0, 0, - 6900,
-						  0, 1, 0, - 3900,
+Mat world_vehicle_matrix = (Mat_<double>(4, 4) << 1, 0, 0, - 300,
+						  0, 1, 0, - 2700,
 						  0, 0, 1, - 0,
 						  0, 0, 0, 1);
 
@@ -131,7 +132,7 @@ void localization(apriltag_detection_t *det)
 int main(int argc, char **argv)
 {
 	VideoCapture cap_front;
-	cap_front.open(VIDEO);
+	cap_front.open("/dev/video0");
 	cap_front.set(CAP_PROP_FRAME_WIDTH, 1280);
 	cap_front.set(CAP_PROP_FRAME_HEIGHT, 800);//TODO
 	if (!cap_front.isOpened())return -1;
@@ -162,7 +163,7 @@ int main(int argc, char **argv)
 			//cout << "id:" << det->id << endl;
 			localization(det);
 		}
-		//imshow("Tag Det", frame);
+		imshow("Tag Det", frame);
 		waitKey(1000/30);
 	}
 	return 0;

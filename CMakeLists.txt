@@ -148,6 +148,8 @@ include_directories(${apriltag_INCLUDE_DIRS}/apriltag)
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/localization_moudle_node.cpp)
 add_executable(localization src/localization.cc)
+add_executable(localization_left src/localization_left.cc)
+add_executable(localization_right src/localization_right.cc)
 add_executable(calibration src/calibration.cc)
 add_executable(camera_test src/camera_test.cc)
 ## Rename C++ executable without prefix
@@ -166,6 +168,18 @@ target_link_libraries(localization
 )
 target_link_libraries(localization ${OpenCV_LIBS})
 target_link_libraries(localization apriltag)
+
+target_link_libraries(localization_left
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(localization_left ${OpenCV_LIBS})
+target_link_libraries(localization_left apriltag)
+
+target_link_libraries(localization_right
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(localization_right ${OpenCV_LIBS})
+target_link_libraries(localization_right apriltag)
 
 target_link_libraries(calibration
    ${catkin_LIBRARIES}

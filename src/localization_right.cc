@@ -43,35 +43,12 @@ void draw(Mat frame, apriltag_detection_t *det)
 	fontface, fontscale, Scalar(0xff, 0x99, 0), 2);
 }
 
-Mat cam_vehicle_matrix = (Mat_<double>(4,4) << 
-		0.009428897308738441, 0.4046610770717959, -0.9144181256944964, -49.64824355231394,
- 		0.9997549087383008, 0.01450291012810097, 0.01672686615862564, -110.2963894453878,
- 		0.02003043557223883, -0.9143517257056557, -0.4044251517275798, 267.5106540551146,
- 		0, 0, 0, 1);
 
-Mat cam_vehicle_matrix_spare = (Mat_<double>(4,4) << 
-		0.02041298246973356, -0.3463143773784212, 0.9378964026840526, 37.68261996203637,
-	 	-0.9993413293598622, 0.02108442569754721, 0.02953564670474877, -108.3260921404521,
- 		-0.03000362611341297, -0.9378815484985302, -0.3456558742536363, 270.4631396799787,
- 		0, 0, 0, 1);
-
-Mat cam_vehicle_matrix_front = (Mat_<double>(4,4) <<
-		0.01916490749701911, 0.4046294135290435, -0.9142799046395874, -48.94392995786529,
- 		0.9995663134440431, 0.01269503941903695, 0.02657105571922308, -87.92089039547136,
- 		0.02235825012194969, -0.9143926255615209, -0.4042106319361143, 267.8351117172357,
- 		0, 0, 0, 1);
-
-Mat cameraMatrix_left = (Mat_<double>(3,3) << 
-		1.298868409966510e+03, 0, 6.377400159724644e+02,
-		0, 1.299075503646548e+03, 3.875515416693556e+02,
-		0, 0, 1);
-Mat distCoeffs_left = (Mat_<double>(1,5) << 0.001087898463482, 0.006889907983617, 0, 0, 0);
-
-Mat cameraMatrix_front = (Mat_<double>(3,3) << 
-		865.920425978195, 0, 654.873058068272,
-		0, 865.658142181186, 350.919789060440,
-		0, 0, 1);
-Mat distCoeffs_front = (Mat_<double>(1,5) << 0.00104731823467106, 0.00232463818599928, 0, 0, 0);
+Mat cam_vehicle_matrix_right = (Mat_<double>(4,4) << 
+		0.01510392000072121, -0.3550680963573331, 0.9347184167169231, 44.44903535313944,
+ -0.99932149613399, 0.02604567277275888, 0.02604170298460074, -71.81660094039853,
+ -0.03359194792112556, -0.9344775384561117, -0.3544337895233332, 271.1101692259581,
+ 0, 0, 0, 1);
 
 Mat cameraMatrix_right = (Mat_<double>(3,3) <<
 		1145.91055981631, 0, 691.158173381245,
@@ -85,7 +62,7 @@ struct localization_type{
 	double phi;
 }localization_msg;
 
-void localization(apriltag_detection_t *det, bool left_right)
+void localization(apriltag_detection_t *det)
 {
 	vector<Point3d> objectPoints;
 	vector<Point2d> imagePoints;
@@ -96,16 +73,8 @@ void localization(apriltag_detection_t *det, bool left_right)
 
 	int id = det->id;
 	Mat cameraMatrix, distCoeffs;
-	if (left_right)
-	{
-		cameraMatrix = cameraMatrix_left;
-		distCoeffs = distCoeffs_left;
-	}
-	else
-	{
-		cameraMatrix = cameraMatrix_right;
-		distCoeffs = distCoeffs_right;
-	}
+	cameraMatrix = cameraMatrix_right;
+	distCoeffs = distCoeffs_right;
 
 	if (id > 100)
 	{
@@ -133,7 +102,7 @@ void localization(apriltag_detection_t *det, bool left_right)
 		hconcat(rmat, tvec, world_cam_matrix);
 		vconcat(world_cam_matrix, supplement, world_cam_matrix);
 		//cout << "world_cam_matrix" << world_cam_matrix << endl;
-		Mat world_vehicle_matrix = cam_vehicle_matrix * world_cam_matrix;
+		Mat world_vehicle_matrix = cam_vehicle_matrix_right * world_cam_matrix;
 		//cout << "world_vehicle_matrix" << world_vehicle_matrix << endl;
 		Mat world_vehicle_matrix_invert;
 		invert(world_vehicle_matrix, world_vehicle_matrix_invert);
@@ -142,8 +111,9 @@ void localization(apriltag_detection_t *det, bool left_right)
 		localization_msg.x = vehicle_coordinate.at<double>(0, 0);
 		localization_msg.y = vehicle_coordinate.at<double>(0, 1);
 		cout << "x:" << localization_msg.x << "y:" << localization_msg.y << endl;
-		double phi_cos = world_vehicle_matrix.at<double>(1, 0)/1;
-		double phi_sin = world_vehicle_matrix.at<double>(1, 1)/1;
+		double addition = sqrt(pow(world_vehicle_matrix.at<double>(1, 0), 2) + pow(world_vehicle_matrix.at<double>(1, 1), 2));
+		double phi_cos = world_vehicle_matrix.at<double>(1, 0)/addition;
+		double phi_sin = world_vehicle_matrix.at<double>(1, 1)/addition;
 		double phi_bycos = acos(phi_cos);
 		double phi_bysin = asin(phi_sin);
 		double phi = 0;
@@ -163,21 +133,15 @@ void localization(apriltag_detection_t *det, bool left_right)
 int main(int argc, char **argv)
 {
 	localization_moudle::Position position_msg;
-	ros::init(argc, argv, "localization");
+	ros::init(argc, argv, "localization_right");
 	ros::NodeHandle node;
-	ros::Publisher localization_publisher = node.advertise<localization_moudle::Position>("position",1);
+	ros::Publisher localization_publisher = node.advertise<localization_moudle::Position>("position_right",1);
 	ros::Rate loop_rate(1000/30);
 
-	VideoCapture cap_left;
-	cap_left.open("/dev/video2");
-	cap_left.set(CAP_PROP_FRAME_WIDTH, 1280);
-	cap_left.set(CAP_PROP_FRAME_HEIGHT, 800);
-	if (!cap_left.isOpened())return -1;
-
 	VideoCapture cap_right;
-	cap_left.open("/dev/video0");
-	cap_left.set(CAP_PROP_FRAME_WIDTH, 1280);
-	cap_left.set(CAP_PROP_FRAME_HEIGHT, 800);
+	cap_right.open("/dev/video0");
+	cap_right.set(CAP_PROP_FRAME_WIDTH, 1280);
+	cap_right.set(CAP_PROP_FRAME_HEIGHT, 800);
 	if (!cap_right.isOpened())return -1;
 
 	apriltag_detector_t *td = apriltag_detector_create();
@@ -192,23 +156,13 @@ int main(int argc, char **argv)
 	int max_fraction = 0;
 	int winner_num = 0;
 	bool flag = 0;
-	bool left_right = 0;
 
 	while (ros::ok())
 	{
 		ros::spinOnce();
 
-		cap_left.read(frame_left);
 		cap_right.read(frame_right);
-		cvtColor(frame_left, gray_left, COLOR_BGR2GRAY);
 		cvtColor(frame_right, gray_right, COLOR_BGR2GRAY);
-
-		image_u8_t img_tag_left = {
-			.width = gray_left.cols,
-			.height = gray_left.rows,
-			.stride = gray_left.cols,
-			.buf = gray_left.data
-		};
 
 		image_u8_t img_tag_right = {
 			.width = gray_right.cols,
@@ -217,7 +171,7 @@ int main(int argc, char **argv)
 			.buf = gray_right.data
 		};
 
-		zarray_t *detections = apriltag_detector_detect(td, &img_tag_left);
+		zarray_t *detections = apriltag_detector_detect(td, &img_tag_right);
 		apriltag_detection_t *det;
 		
 		for (int i = 0; i < zarray_size(detections); i++)
@@ -228,7 +182,6 @@ int main(int argc, char **argv)
 			if (fraction > max_fraction && det->id > 100)
 			{
 				flag = 1;
-				left_right = 1;
 				winner_num = i;
 				max_fraction = fraction;
 			}
@@ -236,34 +189,12 @@ int main(int argc, char **argv)
 		}
 		cout << zarray_size(detections) << endl;
 		
-		if (flag == 0)
-		{
-			zarray_t *detections = apriltag_detector_detect(td, &img_tag_right);
-			apriltag_detection_t *det;
-			detections = apriltag_detector_detect(td, &img_tag_right);
-			
-			for (int i = 0; i < zarray_size(detections); i++)
-			{
-				zarray_get(detections, i, &det);
-				fraction = pow(det->p[0][0] - det->p[2][0], 2) + pow(det->p[0][1] - det->p[0][1], 2) + pow(det->p[1][0] - det->p[3][0], 2) + pow(det->p[1][1] - det->p[3][1], 2);
-				//cout << "id:" << det->id  << "fraction" << fraction << endl;
-				if (fraction > max_fraction && det->id > 100)
-				{
-					flag = 1;
-					left_right = 0;
-					winner_num = i;
-					max_fraction = fraction;
-				}
-				//localization(det);
-			}
-		}
-
 		if (flag && zarray_size(detections) > 0)
 		{
 			cout << "winner_num:" << winner_num << endl;
 			zarray_get(detections, winner_num, &det);
-			draw(frame_left, det);
-			localization(det, left_right);
+			draw(frame_right, det);
+			localization(det);
 			position_msg.x = localization_msg.x;
 			position_msg.y = localization_msg.y;
 			position_msg.phi = localization_msg.phi;
@@ -277,7 +208,7 @@ int main(int argc, char **argv)
 		fraction = 0;
 
 		//imshow("Tag Det", frame);
-		waitKey(1000/30);
+		//waitKey(1000/30);
 		loop_rate.sleep();
 	}
 	return 0;
