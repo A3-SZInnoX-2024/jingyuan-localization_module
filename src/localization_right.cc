@@ -45,9 +45,9 @@ void draw(Mat frame, apriltag_detection_t *det)
 
 
 Mat cam_vehicle_matrix_right = (Mat_<double>(4,4) << 
-		0.01510392000072121, -0.3550680963573331, 0.9347184167169231, 44.44903535313944,
- -0.99932149613399, 0.02604567277275888, 0.02604170298460074, -71.81660094039853,
- -0.03359194792112556, -0.9344775384561117, -0.3544337895233332, 271.1101692259581,
+		0.01638967632294089, -0.3566312236037909, 0.9341014660415066, 43.39459938286376,
+ -0.9991910196291125, 0.02847166350281179, 0.02840194834719894, -96.24566908598399,
+ -0.03672444421041032, -0.9338112950314135, -0.3558760745950632, 271.5232366692704,
  0, 0, 0, 1);
 
 Mat cameraMatrix_right = (Mat_<double>(3,3) <<
@@ -79,8 +79,8 @@ void localization(apriltag_detection_t *det)
 	if (id > 100)
 	{
 		id = id - 100;
-		int center_x = (id % 13 - 1) * 600 + 300;
-		int center_y = (id / 13) * 600 + 300;
+		int center_x = ((id - 1) % 13) * 600 + 300;
+                int center_y = ((id - 1) / 13) * 600 + 300;
 		objectPoints.push_back(Point3d(center_x - 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y + 100, 0));

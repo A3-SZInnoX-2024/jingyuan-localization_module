@@ -110,8 +110,8 @@ void localization(apriltag_detection_t *det, bool left_right)
 	if (id > 100)
 	{
 		id = id - 100;
-		int center_x = (id % 13 - 1) * 600 + 300;
-		int center_y = (id / 13) * 600 + 300;
+		int center_x = ((id - 1) % 13) * 600 + 300;
+                int center_y = ((id - 1) / 13) * 600 + 300;
 		objectPoints.push_back(Point3d(center_x - 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y - 100, 0));
 		objectPoints.push_back(Point3d(center_x + 100, center_y + 100, 0));
